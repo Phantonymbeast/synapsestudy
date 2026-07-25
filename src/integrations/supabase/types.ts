@@ -14,7 +14,218 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          mode: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mode?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mode?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          confidence: number | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      quizzes: {
+        Row: {
+          analysis: string | null
+          answers: Json | null
+          completed_at: string | null
+          created_at: string
+          difficulty: string
+          id: string
+          questions: Json
+          score: number | null
+          subject: string
+          topic: string | null
+          total: number | null
+          user_id: string
+        }
+        Insert: {
+          analysis?: string | null
+          answers?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          difficulty?: string
+          id?: string
+          questions: Json
+          score?: number | null
+          subject: string
+          topic?: string | null
+          total?: number | null
+          user_id: string
+        }
+        Update: {
+          analysis?: string | null
+          answers?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          difficulty?: string
+          id?: string
+          questions?: Json
+          score?: number | null
+          subject?: string
+          topic?: string | null
+          total?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reflections: {
+        Row: {
+          ai_feedback: string | null
+          content: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          ai_feedback?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          ai_feedback?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      study_plans: {
+        Row: {
+          created_at: string
+          exam_date: string
+          exam_name: string
+          id: string
+          plan: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exam_date: string
+          exam_name: string
+          id?: string
+          plan: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exam_date?: string
+          exam_name?: string
+          id?: string
+          plan?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      xp_events: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          meta: Json | null
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          meta?: Json | null
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json | null
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
