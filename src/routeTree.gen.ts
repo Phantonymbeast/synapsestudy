@@ -12,12 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedTutorRouteImport } from './routes/_authenticated/tutor'
 import { Route as AuthenticatedReflectionRouteImport } from './routes/_authenticated/reflection'
 import { Route as AuthenticatedQuizRouteImport } from './routes/_authenticated/quiz'
 import { Route as AuthenticatedProgressRouteImport } from './routes/_authenticated/progress'
 import { Route as AuthenticatedPlannerRouteImport } from './routes/_authenticated/planner'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedTutorIndexRouteImport } from './routes/_authenticated/tutor.index'
 import { Route as AuthenticatedTutorIdRouteImport } from './routes/_authenticated/tutor.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -33,11 +33,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedTutorRoute = AuthenticatedTutorRouteImport.update({
-  id: '/tutor',
-  path: '/tutor',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedReflectionRoute = AuthenticatedReflectionRouteImport.update({
   id: '/reflection',
@@ -64,10 +59,15 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTutorIndexRoute = AuthenticatedTutorIndexRouteImport.update({
+  id: '/tutor/',
+  path: '/tutor/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTutorIdRoute = AuthenticatedTutorIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AuthenticatedTutorRoute,
+  id: '/tutor/$id',
+  path: '/tutor/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -78,8 +78,8 @@ export interface FileRoutesByFullPath {
   '/progress': typeof AuthenticatedProgressRoute
   '/quiz': typeof AuthenticatedQuizRoute
   '/reflection': typeof AuthenticatedReflectionRoute
-  '/tutor': typeof AuthenticatedTutorRouteWithChildren
   '/tutor/$id': typeof AuthenticatedTutorIdRoute
+  '/tutor/': typeof AuthenticatedTutorIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -89,8 +89,8 @@ export interface FileRoutesByTo {
   '/progress': typeof AuthenticatedProgressRoute
   '/quiz': typeof AuthenticatedQuizRoute
   '/reflection': typeof AuthenticatedReflectionRoute
-  '/tutor': typeof AuthenticatedTutorRouteWithChildren
   '/tutor/$id': typeof AuthenticatedTutorIdRoute
+  '/tutor': typeof AuthenticatedTutorIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -102,8 +102,8 @@ export interface FileRoutesById {
   '/_authenticated/progress': typeof AuthenticatedProgressRoute
   '/_authenticated/quiz': typeof AuthenticatedQuizRoute
   '/_authenticated/reflection': typeof AuthenticatedReflectionRoute
-  '/_authenticated/tutor': typeof AuthenticatedTutorRouteWithChildren
   '/_authenticated/tutor/$id': typeof AuthenticatedTutorIdRoute
+  '/_authenticated/tutor/': typeof AuthenticatedTutorIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -115,8 +115,8 @@ export interface FileRouteTypes {
     | '/progress'
     | '/quiz'
     | '/reflection'
-    | '/tutor'
     | '/tutor/$id'
+    | '/tutor/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -126,8 +126,8 @@ export interface FileRouteTypes {
     | '/progress'
     | '/quiz'
     | '/reflection'
-    | '/tutor'
     | '/tutor/$id'
+    | '/tutor'
   id:
     | '__root__'
     | '/'
@@ -138,8 +138,8 @@ export interface FileRouteTypes {
     | '/_authenticated/progress'
     | '/_authenticated/quiz'
     | '/_authenticated/reflection'
-    | '/_authenticated/tutor'
     | '/_authenticated/tutor/$id'
+    | '/_authenticated/tutor/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -170,13 +170,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/tutor': {
-      id: '/_authenticated/tutor'
-      path: '/tutor'
-      fullPath: '/tutor'
-      preLoaderRoute: typeof AuthenticatedTutorRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/reflection': {
       id: '/_authenticated/reflection'
@@ -213,26 +206,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tutor/': {
+      id: '/_authenticated/tutor/'
+      path: '/tutor'
+      fullPath: '/tutor/'
+      preLoaderRoute: typeof AuthenticatedTutorIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tutor/$id': {
       id: '/_authenticated/tutor/$id'
-      path: '/$id'
+      path: '/tutor/$id'
       fullPath: '/tutor/$id'
       preLoaderRoute: typeof AuthenticatedTutorIdRouteImport
-      parentRoute: typeof AuthenticatedTutorRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
-
-interface AuthenticatedTutorRouteChildren {
-  AuthenticatedTutorIdRoute: typeof AuthenticatedTutorIdRoute
-}
-
-const AuthenticatedTutorRouteChildren: AuthenticatedTutorRouteChildren = {
-  AuthenticatedTutorIdRoute: AuthenticatedTutorIdRoute,
-}
-
-const AuthenticatedTutorRouteWithChildren =
-  AuthenticatedTutorRoute._addFileChildren(AuthenticatedTutorRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -240,7 +229,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProgressRoute: typeof AuthenticatedProgressRoute
   AuthenticatedQuizRoute: typeof AuthenticatedQuizRoute
   AuthenticatedReflectionRoute: typeof AuthenticatedReflectionRoute
-  AuthenticatedTutorRoute: typeof AuthenticatedTutorRouteWithChildren
+  AuthenticatedTutorIdRoute: typeof AuthenticatedTutorIdRoute
+  AuthenticatedTutorIndexRoute: typeof AuthenticatedTutorIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -249,7 +239,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProgressRoute: AuthenticatedProgressRoute,
   AuthenticatedQuizRoute: AuthenticatedQuizRoute,
   AuthenticatedReflectionRoute: AuthenticatedReflectionRoute,
-  AuthenticatedTutorRoute: AuthenticatedTutorRouteWithChildren,
+  AuthenticatedTutorIdRoute: AuthenticatedTutorIdRoute,
+  AuthenticatedTutorIndexRoute: AuthenticatedTutorIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
