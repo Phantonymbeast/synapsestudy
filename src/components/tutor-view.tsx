@@ -120,10 +120,10 @@ export function TutorView({ conversationId }: { conversationId?: string }) {
         <ScrollArea className="flex-1 px-2 pb-3">
           <div className="space-y-1">
             {conversations.data?.map((c) => (
-              <div key={c.id} className="group relative">
+              <div key={c.id} className="group relative animate-slide-in-left">
                 <button
-                  className={`w-full truncate rounded-lg px-3 py-2 pr-8 text-left text-sm hover:bg-accent ${
-                    c.id === conversationId ? "bg-accent font-medium" : ""
+                  className={`w-full truncate rounded-lg px-3 py-2 pr-8 text-left text-sm transition-all duration-200 hover:translate-x-0.5 hover:bg-accent ${
+                    c.id === conversationId ? "bg-gradient-brand-soft font-medium ring-glow" : ""
                   }`}
                   onClick={() => navigate({ to: "/tutor/$id", params: { id: c.id } })}
                 >
@@ -158,9 +158,9 @@ export function TutorView({ conversationId }: { conversationId?: string }) {
               <button
                 key={k}
                 onClick={() => setMode(k)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-all duration-300 hover:-translate-y-0.5 ${
                   active
-                    ? "border-primary bg-gradient-brand text-white shadow-glow"
+                    ? "animate-pop border-primary bg-gradient-brand text-white shadow-glow"
                     : "border-border bg-background text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -178,12 +178,12 @@ export function TutorView({ conversationId }: { conversationId?: string }) {
             ) : (
               <div className="space-y-6">
                 {messages.map((m, i) => (
-                  <MessageBubble key={m.id ?? i} msg={m} />
+                  <MessageBubble key={m.id ?? i} msg={m} index={i} />
                 ))}
                 {pending && <MessageBubble msg={pending} />}
                 {mutation.isPending && (
                   <div className="flex items-start gap-3 animate-fade-in-up">
-                    <SynapseLogo size={32} />
+                    <div className="animate-pulse-glow"><SynapseLogo size={32} /></div>
                     <div className="rounded-2xl bg-muted/60 px-4 py-3"><ThinkingDots /></div>
                   </div>
                 )}
@@ -244,10 +244,13 @@ export function TutorView({ conversationId }: { conversationId?: string }) {
   );
 }
 
-function MessageBubble({ msg }: { msg: Msg }) {
+function MessageBubble({ msg, index = 0 }: { msg: Msg; index?: number }) {
   const isUser = msg.role === "user";
   return (
-    <div className={`flex items-start gap-3 animate-fade-in-up ${isUser ? "flex-row-reverse" : ""}`}>
+    <div
+      style={{ animationDelay: `${Math.min(index, 8) * 50}ms` }}
+      className={`flex items-start gap-3 ${isUser ? "flex-row-reverse animate-slide-in-right" : "animate-slide-in-left"}`}
+    >
       {isUser ? (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
           <User className="h-4 w-4" />
@@ -257,14 +260,14 @@ function MessageBubble({ msg }: { msg: Msg }) {
       )}
       <div className={`group max-w-[85%] ${isUser ? "text-right" : ""}`}>
         {isUser ? (
-          <div className="inline-block rounded-2xl bg-primary px-4 py-2.5 text-left text-primary-foreground shadow-sm">
+          <div className="inline-block rounded-2xl bg-gradient-brand px-4 py-2.5 text-left text-primary-foreground shadow-glow transition-shadow duration-300">
             <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
             {msg.confidence != null && (
               <span className="ml-2 text-[10px] opacity-70">confidence {msg.confidence}/5</span>
             )}
           </div>
         ) : (
-          <div className="rounded-2xl bg-muted/50 px-4 py-3">
+          <div className="rounded-2xl bg-muted/50 px-4 py-3 transition-colors duration-300 hover:bg-muted/70">
             <Markdown>{msg.content}</Markdown>
             <div className="mt-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
               <button
@@ -295,7 +298,7 @@ function EmptyState({ mode, onPick }: { mode: Mode; onPick: (s: string) => void 
           <button
             key={s}
             onClick={() => onPick(s)}
-            className="glass rounded-xl p-3 text-left text-sm hover-lift hover:shadow-glow"
+            className="glass animate-scale-in rounded-xl p-3 text-left text-sm hover-lift hover:shadow-glow"
           >
             <Sparkles className="mb-1 h-3.5 w-3.5 text-primary" />
             {s}
