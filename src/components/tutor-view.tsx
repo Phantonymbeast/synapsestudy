@@ -53,7 +53,10 @@ export function TutorView({ conversationId }: { conversationId?: string }) {
   const conversations = useQuery({ queryKey: ["conversations"], queryFn: () => listFn() });
   const current = useQuery({
     queryKey: ["conversation", conversationId],
-    queryFn: () => getFn({ data: { id: conversationId! } }),
+    queryFn: () => {
+      if (!conversationId) throw new Error("Conversation id is missing");
+      return getFn({ data: { id: conversationId } });
+    },
     enabled: !!conversationId,
   });
 
@@ -145,6 +148,14 @@ export function TutorView({ conversationId }: { conversationId?: string }) {
             {conversations.data?.length === 0 && (
               <p className="px-3 py-2 text-xs text-muted-foreground">No conversations yet.</p>
             )}
+            {conversations.isLoading && (
+              <p className="animate-pulse px-3 py-2 text-xs text-muted-foreground">Loading conversations…</p>
+            )}
+            {conversations.isError && (
+              <Button variant="ghost" size="sm" className="w-full justify-start text-destructive" onClick={() => conversations.refetch()}>
+                Couldn’t load history · Retry
+              </Button>
+            )}
           </div>
         </ScrollArea>
       </aside>
@@ -173,7 +184,20 @@ export function TutorView({ conversationId }: { conversationId?: string }) {
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl px-4 py-6">
-            {empty ? (
+            {current.isLoading ? (
+              <div className="flex items-center justify-center gap-3 py-20 text-sm text-muted-foreground">
+                <ThinkingDots /> Loading conversation…
+              </div>
+            ) : current.isError ? (
+              <div className="mx-auto max-w-md py-20 text-center animate-fade-in-up">
+                <h2 className="font-semibold">This conversation couldn’t be opened</h2>
+                <p className="mt-2 text-sm text-muted-foreground">It may have been removed, or the connection was interrupted.</p>
+                <div className="mt-4 flex justify-center gap-2">
+                  <Button variant="outline" onClick={() => current.refetch()}>Try again</Button>
+                  <Button onClick={() => navigate({ to: "/tutor" })}>Start a new chat</Button>
+                </div>
+              </div>
+            ) : empty ? (
               <EmptyState mode={mode} onPick={(s) => { setInput(s); inputRef.current?.focus(); }} />
             ) : (
               <div className="space-y-6">
