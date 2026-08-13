@@ -173,6 +173,11 @@
 @utility hover-lift {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+@utility hover-lift {
+  &:hover {
+    transform: translateY(-3px);
+  }
+}
 @utility ring-glow {
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-primary) 40%, transparent), 0 0 30px -5px color-mix(in oklab, var(--color-primary) 40%, transparent);
 }
@@ -197,10 +202,31 @@
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
 
 @utility animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
 @utility animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
 @utility animate-fade-in-up { animation: fade-in-up 0.4s ease-out both; }
+@utility animate-slide-in-left { animation: slide-in-left 0.35s ease-out both; }
+@utility animate-slide-in-right { animation: slide-in-right 0.35s ease-out both; }
+@utility animate-scale-in { animation: scale-in 0.3s ease-out both; }
+@utility animate-pop { animation: pop 0.35s ease-out; }
 @utility animate-shimmer {
   background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--color-foreground) 8%, transparent), transparent);
   background-size: 200% 100%;
