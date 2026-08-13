@@ -1,30 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { chatComplete, chatJSON, type ChatMsg } from "./ai.server";
-
-// ---------- System prompts ----------
-const SOCRATIC_SYSTEM = `You are Synapse, an AI study companion built on the philosophy "The AI doesn't think instead of the student — it thinks WITH the student."
-
-CORE RULES:
-- Never immediately hand over final answers to problems. Guide the student with 1–2 targeted Socratic questions first.
-- Only reveal the full solution if the student explicitly asks ("just tell me", "give me the answer", "I'm stuck"), or after they have made at least one honest attempt.
-- Adapt tone to confidence: if the student seems unsure, use simple language and analogies; if confident, deepen the challenge.
-- Prefer short, warm, encouraging replies. Use markdown, LaTeX-style math with $...$ when helpful, and clear examples.
-- End most replies with either a guiding question OR a confidence check ("How confident do you feel — 1 to 5?").
-- Never say you are "just an AI". You are a tutor collaborating WITH the student.`;
-
-const DIRECT_SYSTEM = `You are Synapse, a warm, precise AI tutor. Explain clearly with structure, examples, and markdown. Still invite the student to try applying the idea at the end.`;
-
-const REVISION_SYSTEM = `You are Synapse in Revision Mode. Exam is imminent. Be dense and useful: key formulas, memory tricks, top pitfalls, likely exam questions. Use bullet lists and bold key terms.`;
-
-// ---------- Chat ----------
-const SendMessageInput = z.object({
-  conversationId: z.string().uuid().nullable(),
-  content: z.string().min(1).max(4000),
-  mode: z.enum(["socratic", "direct", "revision"]).default("socratic"),
-  confidence: z.number().int().min(1).max(5).nullable().optional(),
-});
+import {
+  ConversationIdInput,
+  DIRECT_SYSTEM,
+  PlannerInput,
+  QuizGenInput,
+  ReflectionInput,
+  REVISION_SYSTEM,
+  SendMessageInput,
+  SOCRATIC_SYSTEM,
+  SubmitQuizInput,
+} from "./synapse-inputs";
 
 export const sendMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -43,15 +30,25 @@ export const sendMessage = createServerFn({ method: "POST" })
         .single();
       if (error) throw new Error(error.message);
       convoId = c.id;
+    } else {
+      const { data: existing, error } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("id", convoId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!existing) throw new Error("Conversation not found");
     }
 
     // Load history
-    const { data: history } = await supabase
+    const { data: history, error: historyError } = await supabase
       .from("messages")
       .select("role, content")
       .eq("conversation_id", convoId)
       .order("created_at", { ascending: true })
       .limit(40);
+    if (historyError) throw new Error(historyError.message);
 
     const systemPrompt =
       data.mode === "revision" ? REVISION_SYSTEM : data.mode === "direct" ? DIRECT_SYSTEM : SOCRATIC_SYSTEM;
@@ -67,24 +64,28 @@ export const sendMessage = createServerFn({ method: "POST" })
     ];
 
     // Save user message
-    await supabase.from("messages").insert({
+    const { error: userMessageError } = await supabase.from("messages").insert({
       conversation_id: convoId,
       user_id: userId,
       role: "user",
       content: data.content,
       confidence: data.confidence ?? null,
     });
+    if (userMessageError) throw new Error(userMessageError.message);
 
     // Call AI
     const reply = await chatComplete({ messages, temperature: 0.8 });
 
     // Save assistant reply
-    await supabase.from("messages").insert({
+    if (!reply.trim()) throw new Error("The tutor returned an empty response. Please try again.");
+
+    const { error: assistantMessageError } = await supabase.from("messages").insert({
       conversation_id: convoId,
       user_id: userId,
       role: "assistant",
       content: reply,
     });
+    if (assistantMessageError) throw new Error(assistantMessageError.message);
 
     // Touch conversation
     await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convoId);
@@ -110,39 +111,32 @@ export const listConversations = createServerFn({ method: "GET" })
 
 export const getConversation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) => z.object({ id: z.string().uuid() }).parse(v))
+  .inputValidator((v: unknown) => ConversationIdInput.parse(v))
   .handler(async ({ data, context }) => {
-    const { data: convo } = await context.supabase
+    const { data: convo, error: convoError } = await context.supabase
       .from("conversations")
       .select("id, title, mode")
       .eq("id", data.id)
       .eq("user_id", context.userId)
       .maybeSingle();
+    if (convoError) throw new Error(convoError.message);
     if (!convo) throw new Error("Not found");
-    const { data: msgs } = await context.supabase
+    const { data: msgs, error: messagesError } = await context.supabase
       .from("messages")
       .select("id, role, content, confidence, created_at")
       .eq("conversation_id", data.id)
       .order("created_at", { ascending: true });
+    if (messagesError) throw new Error(messagesError.message);
     return { conversation: convo, messages: msgs ?? [] };
   });
 
 export const deleteConversation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) => z.object({ id: z.string().uuid() }).parse(v))
+  .inputValidator((v: unknown) => ConversationIdInput.parse(v))
   .handler(async ({ data, context }) => {
     await context.supabase.from("conversations").delete().eq("id", data.id).eq("user_id", context.userId);
     return { ok: true };
   });
-
-// ---------- Quiz ----------
-const QuizGenInput = z.object({
-  subject: z.string().min(1).max(100),
-  topic: z.string().max(200).optional(),
-  difficulty: z.enum(["easy", "medium", "hard"]).default("medium"),
-  count: z.number().int().min(3).max(15).default(5),
-  type: z.enum(["mcq", "mixed"]).default("mcq"),
-});
 
 type QuizQuestion = {
   question: string;
@@ -187,11 +181,6 @@ Rules:
     if (error) throw new Error(error.message);
     return row;
   });
-
-const SubmitQuizInput = z.object({
-  id: z.string().uuid(),
-  answers: z.array(z.number().int()),
-});
 
 export const submitQuiz = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -266,16 +255,6 @@ Give:
     return { score, total: questions.length, wrong, analysis, questions };
   });
 
-// ---------- Study planner ----------
-const PlannerInput = z.object({
-  exam_name: z.string().min(1).max(100),
-  exam_date: z.string(),
-  subjects: z.string().max(500),
-  hours_per_day: z.number().min(0.5).max(16),
-  weak_topics: z.string().max(500).optional(),
-  strong_topics: z.string().max(500).optional(),
-});
-
 export const generateStudyPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => PlannerInput.parse(v))
@@ -335,9 +314,6 @@ export const listStudyPlans = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     return data ?? [];
   });
-
-// ---------- Reflection ----------
-const ReflectionInput = z.object({ content: z.string().min(3).max(1000) });
 
 export const submitReflection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
