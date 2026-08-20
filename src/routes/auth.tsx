@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -21,16 +21,31 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Hard navigation guarantees the protected route re-evaluates with the
+  // freshly persisted session (no manual refresh needed).
+  const goToDashboard = () => {
+    window.location.replace("/dashboard");
+  };
+
   useEffect(() => {
+    let done = false;
+    const enter = () => {
+      if (done) return;
+      done = true;
+      goToDashboard();
+    };
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
+      if (data.session) enter();
     });
-  }, [navigate]);
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) enter();
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   const handleEmail = async (mode: "sign-in" | "sign-up") => {
     if (!email || !password) return toast.error("Enter your email and password");
@@ -45,9 +60,13 @@ function AuthPage() {
               options: { emailRedirectTo: window.location.origin },
             });
       if (error) throw error;
-      toast.success(mode === "sign-in" ? "Welcome back!" : "Check your email if confirmation is required.");
       const { data } = await supabase.auth.getSession();
-      if (data.session) navigate({ to: "/dashboard" });
+      if (data.session) {
+        toast.success("Welcome back!");
+        goToDashboard();
+        return;
+      }
+      toast.success("Check your email to confirm your account.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Auth failed");
     } finally {
@@ -57,14 +76,16 @@ function AuthPage() {
 
   const handleGoogle = async () => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: `${window.location.origin}/auth`,
+    });
     if (result.error) {
       toast.error(result.error instanceof Error ? result.error.message : "Google sign-in failed");
       setLoading(false);
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/dashboard" });
+    goToDashboard();
   };
 
   return (
